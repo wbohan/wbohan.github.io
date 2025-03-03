@@ -1,0 +1,170 @@
+<!DOCTYPE html><html lang="zh-CN" data-theme="light"><head><meta charset="UTF-8"><meta http-equiv="X-UA-Compatible" content="IE=edge"><meta name="viewport" content="width=device-width, initial-scale=1.0,viewport-fit=cover"><title>Kernel_Basic | wbohan's blog</title><meta name="author" content="wbohan"><meta name="copyright" content="wbohan"><meta name="format-detection" content="telephone=no"><meta name="theme-color" content="#ffffff"><meta name="description" content="KernelPwn Basic(持续更新)最近发现CTF Wiki上的KernelPwn更新了，正好最近重温这方面的知识，顺便结合我之前在别的平台发布的一些笔记，重新写一下博客记录。 一、资源 Linux 源码 https:&#x2F;&#x2F;cdn.kernel.org&#x2F;pub  二、一些常用脚本2.1文件系统的解压与重新打包123456789101112131415161718192021222324#&#x2F;bi">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Kernel_Basic">
+<meta property="og:url" content="https://wbohan.github.io/2025/02/28/Kernel-Basic/index.html">
+<meta property="og:site_name" content="wbohan&#39;s blog">
+<meta property="og:description" content="KernelPwn Basic(持续更新)最近发现CTF Wiki上的KernelPwn更新了，正好最近重温这方面的知识，顺便结合我之前在别的平台发布的一些笔记，重新写一下博客记录。 一、资源 Linux 源码 https:&#x2F;&#x2F;cdn.kernel.org&#x2F;pub  二、一些常用脚本2.1文件系统的解压与重新打包123456789101112131415161718192021222324#&#x2F;bi">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://wbohan.github.io/img/wbohan.jpg">
+<meta property="article:published_time" content="2025-02-28T15:00:16.000Z">
+<meta property="article:modified_time" content="2025-03-03T15:46:35.512Z">
+<meta property="article:author" content="wbohan">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://wbohan.github.io/img/wbohan.jpg"><script type="application/ld+json">{
+  "@context": "https://schema.org",
+  "@type": "BlogPosting",
+  "headline": "Kernel_Basic",
+  "url": "https://wbohan.github.io/2025/02/28/Kernel-Basic/",
+  "image": "https://wbohan.github.io/img/wbohan.jpg",
+  "datePublished": "2025-02-28T15:00:16.000Z",
+  "dateModified": "2025-03-03T15:46:35.512Z",
+  "author": [
+    {
+      "@type": "Person",
+      "name": "wbohan",
+      "url": "https://wbohan.github.io/"
+    }
+  ]
+}</script><link rel="shortcut icon" href="/img/favicon.png"><link rel="canonical" href="https://wbohan.github.io/2025/02/28/Kernel-Basic/index.html"><link rel="preconnect" href="//cdn.jsdelivr.net"/><link rel="preconnect" href="//busuanzi.ibruce.info"/><link rel="stylesheet" href="/css/index.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free/css/all.min.css"><script>
+    (() => {
+      
+    const saveToLocal = {
+      set: (key, value, ttl) => {
+        if (!ttl) return
+        const expiry = Date.now() + ttl * 86400000
+        localStorage.setItem(key, JSON.stringify({ value, expiry }))
+      },
+      get: key => {
+        const itemStr = localStorage.getItem(key)
+        if (!itemStr) return undefined
+        const { value, expiry } = JSON.parse(itemStr)
+        if (Date.now() > expiry) {
+          localStorage.removeItem(key)
+          return undefined
+        }
+        return value
+      }
+    }
+
+    window.btf = {
+      saveToLocal,
+      getScript: (url, attr = {}) => new Promise((resolve, reject) => {
+        const script = document.createElement('script')
+        script.src = url
+        script.async = true
+        Object.entries(attr).forEach(([key, val]) => script.setAttribute(key, val))
+        script.onload = script.onreadystatechange = () => {
+          if (!script.readyState || /loaded|complete/.test(script.readyState)) resolve()
+        }
+        script.onerror = reject
+        document.head.appendChild(script)
+      }),
+      getCSS: (url, id) => new Promise((resolve, reject) => {
+        const link = document.createElement('link')
+        link.rel = 'stylesheet'
+        link.href = url
+        if (id) link.id = id
+        link.onload = link.onreadystatechange = () => {
+          if (!link.readyState || /loaded|complete/.test(link.readyState)) resolve()
+        }
+        link.onerror = reject
+        document.head.appendChild(link)
+      }),
+      addGlobalFn: (key, fn, name = false, parent = window) => {
+        if (!false && key.startsWith('pjax')) return
+        const globalFn = parent.globalFn || {}
+        globalFn[key] = globalFn[key] || {}
+        globalFn[key][name || Object.keys(globalFn[key]).length] = fn
+        parent.globalFn = globalFn
+      }
+    }
+  
+      
+      const activateDarkMode = () => {
+        document.documentElement.setAttribute('data-theme', 'dark')
+        if (document.querySelector('meta[name="theme-color"]') !== null) {
+          document.querySelector('meta[name="theme-color"]').setAttribute('content', '#0d0d0d')
+        }
+      }
+      const activateLightMode = () => {
+        document.documentElement.setAttribute('data-theme', 'light')
+        if (document.querySelector('meta[name="theme-color"]') !== null) {
+          document.querySelector('meta[name="theme-color"]').setAttribute('content', '#ffffff')
+        }
+      }
+
+      btf.activateDarkMode = activateDarkMode
+      btf.activateLightMode = activateLightMode
+
+      const theme = saveToLocal.get('theme')
+    
+          theme === 'dark' ? activateDarkMode() : theme === 'light' ? activateLightMode() : null
+        
+      
+      const asideStatus = saveToLocal.get('aside-status')
+      if (asideStatus !== undefined) {
+        document.documentElement.classList.toggle('hide-aside', asideStatus === 'hide')
+      }
+    
+      
+    const detectApple = () => {
+      if (/iPad|iPhone|iPod|Macintosh/.test(navigator.userAgent)) {
+        document.documentElement.classList.add('apple')
+      }
+    }
+    detectApple()
+  
+    })()
+  </script><script>const GLOBAL_CONFIG = {
+  root: '/',
+  algolia: undefined,
+  localSearch: undefined,
+  translate: undefined,
+  highlight: {"plugin":"highlight.js","highlightCopy":true,"highlightLang":true,"highlightHeightLimit":false,"highlightFullpage":false,"highlightMacStyle":false},
+  copy: {
+    success: '复制成功',
+    error: '复制失败',
+    noSupport: '浏览器不支持'
+  },
+  relativeDate: {
+    homepage: false,
+    post: false
+  },
+  runtime: '',
+  dateSuffix: {
+    just: '刚刚',
+    min: '分钟前',
+    hour: '小时前',
+    day: '天前',
+    month: '个月前'
+  },
+  copyright: undefined,
+  lightbox: 'null',
+  Snackbar: undefined,
+  infinitegrid: {
+    js: 'https://cdn.jsdelivr.net/npm/@egjs/infinitegrid/dist/infinitegrid.min.js',
+    buttonText: '加载更多'
+  },
+  isPhotoFigcaption: false,
+  islazyloadPlugin: false,
+  isAnchor: false,
+  percent: {
+    toc: true,
+    rightside: false,
+  },
+  autoDarkmode: false
+}</script><script id="config-diff">var GLOBAL_CONFIG_SITE = {
+  title: 'Kernel_Basic',
+  isHighlightShrink: false,
+  isToc: true,
+  pageType: 'post'
+}</script><meta name="generator" content="Hexo 7.3.0"></head><body><div class="post" id="body-wrap"><header class="post-bg" id="page-header"><nav id="nav"><span id="blog-info"><a class="nav-site-title" href="/"><span class="site-name">wbohan's blog</span></a><a class="nav-page-title" href="/"><span class="site-name">Kernel_Basic</span></a></span><div id="menus"></div></nav><div id="post-info"><h1 class="post-title">Kernel_Basic</h1><div id="post-meta"><div class="meta-firstline"><span class="post-meta-date"><i class="far fa-calendar-alt fa-fw post-meta-icon"></i><span class="post-meta-label">发表于</span><time class="post-meta-date-created" datetime="2025-02-28T15:00:16.000Z" title="发表于 2025-02-28 23:00:16">2025-02-28</time><span class="post-meta-separator">|</span><i class="fas fa-history fa-fw post-meta-icon"></i><span class="post-meta-label">更新于</span><time class="post-meta-date-updated" datetime="2025-03-03T15:46:35.512Z" title="更新于 2025-03-03 23:46:35">2025-03-03</time></span></div><div class="meta-secondline"><span class="post-meta-separator">|</span><span class="post-meta-pv-cv" id="" data-flag-title=""><i class="far fa-eye fa-fw post-meta-icon"></i><span class="post-meta-label">浏览量:</span><span id="busuanzi_value_page_pv"><i class="fa-solid fa-spinner fa-spin"></i></span></span></div></div></div></header><main class="layout" id="content-inner"><div id="post"><article class="container post-content" id="article-container"><h1 id="KernelPwn-Basic-持续更新"><a href="#KernelPwn-Basic-持续更新" class="headerlink" title="KernelPwn Basic(持续更新)"></a>KernelPwn Basic(持续更新)</h1><p>最近发现CTF Wiki上的KernelPwn更新了，正好最近重温这方面的知识，顺便结合我之前在别的平台发布的一些笔记，重新写一下博客记录。</p>
+<h2 id="一、资源"><a href="#一、资源" class="headerlink" title="一、资源"></a>一、资源</h2><ul>
+<li>Linux 源码 <a target="_blank" rel="noopener" href="https://cdn.kernel.org/pub">https://cdn.kernel.org/pub</a></li>
+</ul>
+<h2 id="二、一些常用脚本"><a href="#二、一些常用脚本" class="headerlink" title="二、一些常用脚本"></a>二、一些常用脚本</h2><h3 id="2-1文件系统的解压与重新打包"><a href="#2-1文件系统的解压与重新打包" class="headerlink" title="2.1文件系统的解压与重新打包"></a>2.1文件系统的解压与重新打包</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">#/bin/sh</span></span><br><span class="line"></span><br><span class="line"><span class="comment">#注意，有时文件系统给的是一个压缩包格式，先手动解压再使用脚本。</span></span><br><span class="line"><span class="comment">#在题目目录下使用</span></span><br><span class="line"></span><br><span class="line"><span class="comment">#使用musl-gcc编译出来的exp体积小，必要时可去符号，进一步压缩体积。</span></span><br><span class="line">musl-gcc -static -O2 ./exp.c -o ./exp</span><br><span class="line"></span><br><span class="line"><span class="comment">#创建工作目录</span></span><br><span class="line"><span class="built_in">rm</span> -r tmpfs</span><br><span class="line"><span class="built_in">mkdir</span> -p tmpfs</span><br><span class="line"></span><br><span class="line"><span class="comment">#文件系统备份</span></span><br><span class="line"><span class="built_in">cp</span> rootfs.cpio rootfs.cpio.bak</span><br><span class="line"></span><br><span class="line"><span class="comment">#在工作目录下，解包文件系统，传入exp，重新打包。</span></span><br><span class="line"><span class="built_in">cd</span> tmpfs</span><br><span class="line">cpio -idv &lt; ../rootfs.cpio</span><br><span class="line"><span class="built_in">mv</span> ../exp ./</span><br><span class="line">find . | cpio -o --format=newc &gt; ./rootfs.cpio</span><br><span class="line"><span class="built_in">mv</span> rootfs.cpio ../</span><br><span class="line"></span><br><span class="line"><span class="comment">#需要启动内核时</span></span><br><span class="line"><span class="comment">#./boot.sh</span></span><br></pre></td></tr></table></figure>
+
+<h3 id="2-2-pwntools交互"><a href="#2-2-pwntools交互" class="headerlink" title="2.2 pwntools交互"></a>2.2 pwntools交互</h3><p>通过py起shell传输base64的方式进行交互，打远程，exp可以用gzip打包压缩体积，传输时最好不要一次性传完，将二进制分段传输，不然容易出现base64截断的问题，导致exp不完整。</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">from</span> pwn <span class="keyword">import</span> *</span><br><span class="line"><span class="keyword">import</span> os</span><br><span class="line"></span><br><span class="line">root = <span class="literal">False</span></span><br><span class="line"></span><br><span class="line"><span class="keyword">if</span> root == <span class="literal">True</span>:</span><br><span class="line">    cmd = <span class="string">&#x27;# &#x27;</span></span><br><span class="line"><span class="keyword">else</span>:</span><br><span class="line">    cmd = <span class="string">&#x27;$ &#x27;</span></span><br><span class="line"></span><br><span class="line"><span class="keyword">with</span> <span class="built_in">open</span>(<span class="string">&quot;./exp&quot;</span>, <span class="string">&quot;rb&quot;</span>) <span class="keyword">as</span> f:</span><br><span class="line">    expdata = base64.b64encode(f.read())</span><br><span class="line">    </span><br><span class="line">p = process(<span class="string">&#x27;./boot.sh&#x27;</span>, shell=<span class="literal">True</span>)</span><br><span class="line">p.sendline()</span><br><span class="line"></span><br><span class="line"><span class="keyword">for</span> i <span class="keyword">in</span> <span class="built_in">range</span>(<span class="number">0</span>, <span class="built_in">len</span>(expdata), <span class="number">0x200</span>):</span><br><span class="line">    p.sendlineafter(cmd, <span class="string">&quot;echo -n \&quot;&quot;</span> + expdata[i:i + <span class="number">0x200</span>].decode() + <span class="string">&quot;\&quot; &gt;&gt; /home/ctf/b64_exp&quot;</span>)</span><br><span class="line"></span><br><span class="line">p.sendline(<span class="string">&quot;cat /home/ctf/b64_exp | base64 -d &gt; /home/ctf/exp&quot;</span>)</span><br><span class="line">p.sendline(<span class="string">&quot;chmod +x /home/ctf/exp&quot;</span>)</span><br><span class="line">p.interactive()</span><br></pre></td></tr></table></figure>
+
+</article><div class="post-copyright"><div class="post-copyright__author"><span class="post-copyright-meta"><i class="fas fa-circle-user fa-fw"></i>文章作者: </span><span class="post-copyright-info"><a href="https://wbohan.github.io">wbohan</a></span></div><div class="post-copyright__type"><span class="post-copyright-meta"><i class="fas fa-square-arrow-up-right fa-fw"></i>文章链接: </span><span class="post-copyright-info"><a href="https://wbohan.github.io/2025/02/28/Kernel-Basic/">https://wbohan.github.io/2025/02/28/Kernel-Basic/</a></span></div><div class="post-copyright__notice"><span class="post-copyright-meta"><i class="fas fa-circle-exclamation fa-fw"></i>版权声明: </span><span class="post-copyright-info">本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" target="_blank">CC BY-NC-SA 4.0</a> 许可协议。转载请注明来源 <a href="https://wbohan.github.io" target="_blank">wbohan's blog</a>！</span></div></div><div class="tag_share"><div class="post-share"><div class="social-share" data-image="/img/wbohan.jpg" data-sites="facebook,twitter,wechat,weibo,qq"></div><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/butterfly-extsrc/sharejs/dist/css/share.min.css" media="print" onload="this.media='all'"><script src="https://cdn.jsdelivr.net/npm/butterfly-extsrc/sharejs/dist/js/social-share.min.js" defer></script></div></div><nav class="pagination-post" id="pagination"><a class="pagination-related" href="/2025/02/21/%E6%96%B0%E7%89%88glibc-fsop/" title="新版glibc_fsop"><div class="cover" style="background: var(--default-bg-color)"></div><div class="info"><div class="info-1"><div class="info-item-1">上一篇</div><div class="info-item-2">新版glibc_fsop</div></div><div class="info-2"><div class="info-item-1">1.  常用的gadgets1.1 setcontext + 61[rdx+0xa0]是rsp，[rdx+0xa8]是rcx，栈迁移用，需要能控制rdx。 123456789101112131415161718192021─────────────────────────────────────[ DISASM / x86-64 / set emulate on ]──────────────────────────────────────   0x7fe165955a6d &lt;setcontext+61&gt;     mov    rsp, qword ptr [rdx + 0xa0]   0x7fe165955a74 &lt;setcontext+68&gt;     mov    rbx, qword ptr [rdx + 0x80]   0x7fe165955a7b &lt;setcontext+75&gt;     mov    rbp, qword ptr [rdx + 0x78]   0x7fe165955a7f &lt;setcontext+79&gt; ...</div></div></div></a><a class="pagination-related" href="/2025/03/03/%E5%B0%8F%E7%A8%8B%E5%BA%8F%E6%8A%93%E5%8C%85/" title="小程序抓包"><div class="cover" style="background: var(--default-bg-color)"></div><div class="info text-right"><div class="info-1"><div class="info-item-1">下一篇</div><div class="info-item-2">小程序抓包</div></div><div class="info-2"><div class="info-item-1">学了一下小程序抓包(Proxifier + Burpsuite)Burpsuite可以用Kakit，只需要把代理端口改成Proxifier的代理服务器即可。 先使用Proxifier创建一个Proxy Server。   然后Proxifier中，选择Profile-&gt;Proxification Rule-&gt;Add，选择Applications为WeChatAppEx.exe，Action选择Proxy HTTPS 127.0.0.1。   最后在Burpsuite中，Proxy Settings改成跟Proxifier中Server一样的。注意需要把Burpsuite的证书安装一下，毕竟需要https通信。   最后在Burpsuite中就可以看到抓包的过程信息了。  </div></div></div></a></nav></div><div class="aside-content" id="aside-content"><div class="card-widget card-info text-center"><div class="avatar-img"><img src="/img/wbohan.jpg" onerror="this.onerror=null;this.src='/img/friend_404.gif'" alt="avatar"/></div><div class="author-info-name">wbohan</div><div class="author-info-description">456</div><div class="site-data"><a href="/archives/"><div class="headline">文章</div><div class="length-num">8</div></a><a href="/tags/"><div class="headline">标签</div><div class="length-num">0</div></a><a href="/categories/"><div class="headline">分类</div><div class="length-num">0</div></a></div><a id="card-info-btn" target="_blank" rel="noopener" href="https://github.com/wbohan"><i class="fab fa-github"></i><span>Follow Me</span></a></div><div class="card-widget card-announcement"><div class="item-headline"><i class="fas fa-bullhorn fa-shake"></i><span>公告</span></div><div class="announcement_content">正在搭建中.</div></div><div class="sticky_layout"><div class="card-widget" id="card-toc"><div class="item-headline"><i class="fas fa-stream"></i><span>目录</span><span class="toc-percentage"></span></div><div class="toc-content"><ol class="toc"><li class="toc-item toc-level-1"><a class="toc-link" href="#KernelPwn-Basic-%E6%8C%81%E7%BB%AD%E6%9B%B4%E6%96%B0"><span class="toc-number">1.</span> <span class="toc-text">KernelPwn Basic(持续更新)</span></a><ol class="toc-child"><li class="toc-item toc-level-2"><a class="toc-link" href="#%E4%B8%80%E3%80%81%E8%B5%84%E6%BA%90"><span class="toc-number">1.1.</span> <span class="toc-text">一、资源</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E4%BA%8C%E3%80%81%E4%B8%80%E4%BA%9B%E5%B8%B8%E7%94%A8%E8%84%9A%E6%9C%AC"><span class="toc-number">1.2.</span> <span class="toc-text">二、一些常用脚本</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#2-1%E6%96%87%E4%BB%B6%E7%B3%BB%E7%BB%9F%E7%9A%84%E8%A7%A3%E5%8E%8B%E4%B8%8E%E9%87%8D%E6%96%B0%E6%89%93%E5%8C%85"><span class="toc-number">1.2.1.</span> <span class="toc-text">2.1文件系统的解压与重新打包</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#2-2-pwntools%E4%BA%A4%E4%BA%92"><span class="toc-number">1.2.2.</span> <span class="toc-text">2.2 pwntools交互</span></a></li></ol></li></ol></li></ol></div></div><div class="card-widget card-recent-post"><div class="item-headline"><i class="fas fa-history"></i><span>最新文章</span></div><div class="aside-list"><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/2025/03/03/%E5%B0%8F%E7%A8%8B%E5%BA%8F%E6%8A%93%E5%8C%85/" title="小程序抓包">小程序抓包</a><time datetime="2025-03-03T12:57:58.000Z" title="发表于 2025-03-03 20:57:58">2025-03-03</time></div></div><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/2025/02/28/Kernel-Basic/" title="Kernel_Basic">Kernel_Basic</a><time datetime="2025-02-28T15:00:16.000Z" title="发表于 2025-02-28 23:00:16">2025-02-28</time></div></div><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/2025/02/21/%E6%96%B0%E7%89%88glibc-fsop/" title="新版glibc_fsop">新版glibc_fsop</a><time datetime="2025-02-21T05:04:43.000Z" title="发表于 2025-02-21 13:04:43">2025-02-21</time></div></div><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/2025/02/21/house-of-apple2/" title="house_of_apple2">house_of_apple2</a><time datetime="2025-02-21T05:03:22.000Z" title="发表于 2025-02-21 13:03:22">2025-02-21</time></div></div><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/2025/02/21/largebin-attack-glibc231-example/" title="largebin_attack_glibc231_example">largebin_attack_glibc231_example</a><time datetime="2025-02-21T05:01:48.000Z" title="发表于 2025-02-21 13:01:48">2025-02-21</time></div></div></div></div></div></div></main><footer id="footer"><div id="footer-wrap"><div class="copyright">&copy;2025 By wbohan</div><div class="framework-info"><span>框架 </span><a target="_blank" rel="noopener" href="https://hexo.io">Hexo 7.3.0</a><span class="footer-separator">|</span><span>主题 </span><a target="_blank" rel="noopener" href="https://github.com/jerryc127/hexo-theme-butterfly">Butterfly 5.3.3</a></div></div></footer></div><div id="rightside"><div id="rightside-config-hide"><button id="readmode" type="button" title="阅读模式"><i class="fas fa-book-open"></i></button><button id="darkmode" type="button" title="日间和夜间模式切换"><i class="fas fa-adjust"></i></button><button id="hide-aside-btn" type="button" title="单栏和双栏切换"><i class="fas fa-arrows-alt-h"></i></button></div><div id="rightside-config-show"><button id="rightside-config" type="button" title="设置"><i class="fas fa-cog fa-spin"></i></button><button class="close" id="mobile-toc-button" type="button" title="目录"><i class="fas fa-list-ul"></i></button><button id="go-up" type="button" title="回到顶部"><span class="scroll-percent"></span><i class="fas fa-arrow-up"></i></button></div></div><div><script src="/js/utils.js"></script><script src="/js/main.js"></script><div class="js-pjax"></div><script async data-pjax src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script></div></body></html>
